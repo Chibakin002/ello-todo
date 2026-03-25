@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useAppStore, dayKey } from '../store'
+import { getRepeatLabel, getVisibleTasks } from '../tasks'
 
 const laneRank = { today: 0, next: 1, later: 2 }
 
@@ -9,32 +10,42 @@ export function DailyCheckIn() {
   const applyPlan = useAppStore((s) => s.applyPlan)
   const skipPlan = useAppStore((s) => s.skipPlan)
   
-  const [planIds, setPlanIds] = useState<string[]>([])
+  const [manualPlan, setManualPlan] = useState<{ dayKey: string; ids: string[] } | null>(null)
+  const [todayKey, setTodayKey] = useState(() => dayKey(Date.now()))
 
-  const active = useMemo(() => tasks.filter((t) => t.status === 'active'), [tasks])
-  const todayKey = dayKey(Date.now())
+  const active = useMemo(() => getVisibleTasks(tasks), [tasks])
   const needsCheck = active.length > 0 && lastDailyCheckKey !== todayKey
 
   const plannerCandidates = useMemo(() => {
     return [...active].sort((a, b) => laneRank[a.lane] - laneRank[b.lane] || Date.parse(a.updatedAt) - Date.parse(b.updatedAt)).slice(0, 8)
   }, [active])
 
-  useEffect(() => {
-    if (!needsCheck) {
-      setPlanIds([])
-      return
+  const candidateIds = useMemo(() => plannerCandidates.map((task) => task.id), [plannerCandidates])
+
+  const defaultPlanIds = useMemo(() => {
+    if (!needsCheck) return []
+    return candidateIds.filter((id) => active.some((task) => task.id === id && task.lane === 'today'))
+  }, [active, candidateIds, needsCheck])
+
+  const planIds = useMemo(() => {
+    if (!needsCheck) return []
+    if (manualPlan?.dayKey === todayKey) {
+      const keep = manualPlan.ids.filter((id) => candidateIds.includes(id))
+      if (keep.length) return keep
     }
-    const ids = plannerCandidates.map(t => t.id)
-    setPlanIds(prev => {
-      const keep = prev.filter(id => ids.includes(id))
-      return keep.length ? keep : ids.filter(id => active.some(task => task.id === id && task.lane === 'today'))
-    })
-  }, [needsCheck, plannerCandidates, active])
+    return defaultPlanIds
+  }, [candidateIds, defaultPlanIds, manualPlan, needsCheck, todayKey])
+
+  useEffect(() => {
+    const id = setInterval(() => setTodayKey(dayKey(Date.now())), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   if (!needsCheck) return null
 
   function togglePlan(taskId: string) {
-    setPlanIds(prev => prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId])
+    const nextIds = planIds.includes(taskId) ? planIds.filter((id) => id !== taskId) : [...planIds, taskId]
+    setManualPlan({ dayKey: todayKey, ids: nextIds })
   }
 
   return (
@@ -46,14 +57,16 @@ export function DailyCheckIn() {
       <ul className="planner-list">
         {plannerCandidates.map((task) => {
           const checked = planIds.includes(task.id)
+          const repeatLabel = getRepeatLabel(task)
           return (
-            <li key={task.id}>
-              <label>
+            <li key={task.id} className={checked ? 'is-selected' : ''}>
+              <label className="planner-option">
                 <input type="checkbox" checked={checked} onChange={() => togglePlan(task.id)} />
-                <span>
-                  {task.title}
-                  <small>{task.lane.charAt(0).toUpperCase() + task.lane.slice(1)}</small>
+                <span className="planner-copy">
+                  <strong>{task.title}</strong>
+                  <small>{repeatLabel ?? 'One-time task'}</small>
                 </span>
+                <span className="planner-pill">{task.lane.charAt(0).toUpperCase() + task.lane.slice(1)}</span>
               </label>
             </li>
           )

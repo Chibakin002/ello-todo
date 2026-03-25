@@ -13,6 +13,8 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { TaskLaneColumn } from './TaskLane'
 import { TaskItem } from './TaskItem'
 import { useAppStore } from '../store'
+import { getVisibleTasks } from '../tasks'
+import type { TaskLane } from '../types'
 
 export function Board() {
   const tasks = useAppStore(s => s.tasks)
@@ -25,8 +27,7 @@ export function Board() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const active = tasks
-    .filter(t => t.status === 'active')
+  const active = getVisibleTasks(tasks)
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
   
   const todayTasks = active.filter(t => t.lane === 'today')
@@ -50,7 +51,7 @@ export function Board() {
     
     // Check if dragging over a lane
     if (['today', 'next', 'later'].includes(overId)) {
-       moveLane(taskId, overId as any)
+       moveLane(taskId, overId as TaskLane)
        return
     }
 

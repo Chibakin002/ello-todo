@@ -10,6 +10,9 @@ export interface Task {
   status: TaskStatus
   lane: TaskLane
   repeat: RepeatRule
+  repeatDayOfWeek?: number
+  repeatDayOfMonth?: number
+  nextVisibleOn?: string
   createdAt: string
   updatedAt: string
   completedAt?: string

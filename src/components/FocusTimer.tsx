@@ -23,7 +23,7 @@ export function FocusTimer() {
   const isAlarmRinging = useAppStore(s => s.isAlarmRinging)
   const stopAlarm = useAppStore(s => s.stopAlarm)
   
-  const [nowMs, setNowMs] = useState(Date.now())
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
     if (!activeTimer) return

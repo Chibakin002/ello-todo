@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAppStore } from '../store'
+import { ordinal, weekdayOptions } from '../tasks'
 import type { TaskLane, RepeatRule, TaskEnergy } from '../types'
 
 export function TaskForm() {
@@ -8,6 +9,8 @@ export function TaskForm() {
   const [title, setTitle] = useState('')
   const [lane, setLane] = useState<TaskLane>('today')
   const [repeat, setRepeat] = useState<RepeatRule>('none')
+  const [repeatDayOfWeek, setRepeatDayOfWeek] = useState(() => new Date().getDay())
+  const [repeatDayOfMonth, setRepeatDayOfMonth] = useState(() => new Date().getDate())
   const [energy, setEnergy] = useState<TaskEnergy>('medium')
   const [tagsInput, setTagsInput] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -23,12 +26,22 @@ export function TaskForm() {
 
     const tags = tagsInput.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
     
-    // Fire and forget async call, the UI updates optimistically via Zustand
-    addTask(taskTitle, lane, repeat, tags, energy)
+    addTask({
+      title: taskTitle,
+      lane,
+      repeat,
+      repeatDayOfWeek: repeat === 'weekly' ? repeatDayOfWeek : undefined,
+      repeatDayOfMonth: repeat === 'monthly' ? repeatDayOfMonth : undefined,
+      tags,
+      energy,
+    })
 
     setTitle('')
     setTagsInput('')
     setRepeat('none')
+    const resetDate = new Date()
+    setRepeatDayOfWeek(resetDate.getDay())
+    setRepeatDayOfMonth(resetDate.getDate())
     setEnergy('medium')
     setError(null)
     titleRef.current?.focus()
@@ -76,6 +89,36 @@ export function TaskForm() {
           aria-label="Tags" 
         />
       </div>
+
+      {repeat !== 'none' && (
+        <div className="form-row repeat-row">
+          {repeat === 'weekly' && (
+            <label className="repeat-config">
+              <span>Repeats every</span>
+              <select value={repeatDayOfWeek} onChange={(e) => setRepeatDayOfWeek(Number(e.target.value))} aria-label="Repeat weekday">
+                {weekdayOptions.map((day, index) => (
+                  <option key={day} value={index}>{day}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {repeat === 'monthly' && (
+            <label className="repeat-config">
+              <span>Repeats on the</span>
+              <select value={repeatDayOfMonth} onChange={(e) => setRepeatDayOfMonth(Number(e.target.value))} aria-label="Repeat date of month">
+                {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
+                  <option key={day} value={day}>{ordinal(day)}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <p className="repeat-hint">
+            When you complete it, it disappears and comes back on its next scheduled date.
+          </p>
+        </div>
+      )}
       
       {error && <p className="error-text">{error}</p>}
     </form>

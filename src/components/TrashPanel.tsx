@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useAppStore } from '../store'
 
 const DAY_MS = 86_400_000
@@ -10,11 +10,14 @@ export function TrashPanel() {
   const deleteFromTrash = useAppStore(s => s.deleteFromTrash)
   const cleanupTrash = useAppStore(s => s.cleanupTrash)
   
-  const nowMs = Date.now()
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
   // Run cleanup periodically
   useEffect(() => {
-    const id = setInterval(() => cleanupTrash(), 60_000)
+    const id = setInterval(() => {
+      setNowMs(Date.now())
+      cleanupTrash()
+    }, 60_000)
     return () => clearInterval(id)
   }, [cleanupTrash])
 

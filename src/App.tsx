@@ -9,10 +9,12 @@ import { ArchivePanel } from './components/ArchivePanel'
 import { TrashPanel } from './components/TrashPanel'
 import { DailyCheckIn } from './components/DailyCheckIn'
 import { NowCard } from './components/NowCard'
+import { getVisibleTasks } from './tasks'
 
 function App() {
   const loadFromDb = useAppStore((s) => s.loadFromDb)
   const performUndo = useAppStore((s) => s.performUndo)
+  const clearUndo = useAppStore((s) => s.clearUndo)
   const undo = useAppStore((s) => s.undo)
   const tasks = useAppStore(s => s.tasks)
 
@@ -22,9 +24,23 @@ function App() {
     loadFromDb().then(() => setLoading(false))
   }, [loadFromDb])
 
+  useEffect(() => {
+    if (!undo) return
+
+    const remainingMs = undo.expiresAt - Date.now()
+    if (remainingMs <= 0) {
+      clearUndo()
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => clearUndo(), remainingMs)
+    return () => window.clearTimeout(timeoutId)
+  }, [undo, clearUndo])
+
   if (loading) return <div className="app-shell" style={{ padding: '2rem' }}>Loading Database...</div>
 
-  const todayCount = tasks.filter(t => t.status === 'active' && t.lane === 'today').length
+  const visibleTasks = getVisibleTasks(tasks)
+  const todayCount = visibleTasks.filter(t => t.lane === 'today').length
   
   return (
     <div className="app-shell">
@@ -51,7 +67,7 @@ function App() {
         <section className="card command-card">
           <div className="card-head">
             <h2>Your Tasks</h2>
-            <span>{tasks.filter(t => t.status === 'active').length} active</span>
+            <span>{visibleTasks.length} active now</span>
           </div>
           <TaskForm />
           <Board />

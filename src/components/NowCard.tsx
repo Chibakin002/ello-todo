@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../store'
+import { getVisibleTasks } from '../tasks'
 
 export function NowCard() {
   const tasks = useAppStore(s => s.tasks)
   const startFocus = useAppStore(s => s.startFocus)
   const activeTimer = useAppStore(s => s.activeTimer)
 
-  const active = useMemo(() => tasks.filter(t => t.status === 'active'), [tasks])
+  const active = useMemo(() => getVisibleTasks(tasks), [tasks])
   
   const recommended = useMemo(() => {
     const laneRank = { today: 0, next: 1, later: 2 }

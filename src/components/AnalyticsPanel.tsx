@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppStore, dayKey } from '../store'
+import { getVisibleTasks } from '../tasks'
 
 export function AnalyticsPanel() {
   const sessions = useAppStore(s => s.sessions)
@@ -7,8 +8,13 @@ export function AnalyticsPanel() {
   const xp = useAppStore(s => s.xp)
   const level = useAppStore(s => s.level)
 
-  const nowMs = Date.now()
+  const [nowMs, setNowMs] = useState(() => Date.now())
   const todayKeyStr = dayKey(nowMs)
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const sessionsToday = useMemo(() => {
     return sessions.filter(s => s.completed && dayKey(s.endedAt) === todayKeyStr).length
@@ -22,7 +28,7 @@ export function AnalyticsPanel() {
   }, [sessions, todayKeyStr])
 
   const done = useMemo(() => tasks.filter(t => t.status === 'done'), [tasks])
-  const active = useMemo(() => tasks.filter(t => t.status === 'active'), [tasks])
+  const active = useMemo(() => getVisibleTasks(tasks), [tasks])
 
   const completion7d = useMemo(() => {
     const start = new Date(nowMs - 6 * 86_400_000)

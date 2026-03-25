@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../store'
+import { getRepeatLabel } from '../tasks'
 import type { Task, TaskLane } from '../types'
 
 function cycleLane(lane: TaskLane): TaskLane {
@@ -14,13 +15,6 @@ function cycleLabel(lane: TaskLane): string {
   if (lane === 'today') return 'Send Next'
   if (lane === 'next') return 'Send Later'
   return 'Bring Today'
-}
-
-function repeatLabel(repeat: string): string {
-  if (repeat === 'daily') return 'Daily'
-  if (repeat === 'weekly') return 'Weekly'
-  if (repeat === 'monthly') return 'Monthly'
-  return ''
 }
 
 function formatDate(value: string): string {
@@ -42,6 +36,7 @@ export function TaskItem({ task, selected, onSelect }: Props) {
 
   const runningHere = activeTimer?.taskId === task.id
   const disableFocus = Boolean(activeTimer && !runningHere)
+  const repeatLabel = getRepeatLabel(task)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -74,7 +69,7 @@ export function TaskItem({ task, selected, onSelect }: Props) {
           {task.energy && task.energy !== 'medium' && <span className={`tag energy-${task.energy}`}>{task.energy}</span>}
         </div>
         <div className="task-meta">
-          {task.repeat !== 'none' && <small>{repeatLabel(task.repeat)}</small>}
+          {repeatLabel && <small>{repeatLabel}</small>}
           <small>Updated {formatDate(task.updatedAt)}</small>
         </div>
       </div>

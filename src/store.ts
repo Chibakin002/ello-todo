@@ -4,6 +4,7 @@ import { db } from './db'
 import { playBeep, playSuccess, playBuzzer, stopBuzzer } from './audio'
 import confetti from 'canvas-confetti'
 import type { Task, FocusSession, ActiveTimer, Settings, TaskLane, RepeatRule, SessionMode, TaskEnergy } from './types'
+import { computeNextVisibleOn, normalizeRepeatSchedule } from './tasks'
 
 const DAY_MS = 86_400_000
 const UNDO_MS = 10_000
@@ -60,7 +61,15 @@ interface AppState {
   loadFromDb: () => Promise<void>
   
   // Tasks
-  addTask: (title: string, lane: TaskLane, repeat: RepeatRule, tags?: string[], energy?: TaskEnergy) => Promise<void>
+  addTask: (input: {
+    title: string
+    lane: TaskLane
+    repeat: RepeatRule
+    repeatDayOfWeek?: number
+    repeatDayOfMonth?: number
+    tags?: string[]
+    energy?: TaskEnergy
+  }) => Promise<void>
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>
   moveLane: (taskId: string, target: TaskLane) => Promise<void>
   markDone: (taskId: string) => Promise<void>
@@ -106,14 +115,16 @@ export const useAppStore = create<AppState>()(
         set({ tasks, sessions })
       },
 
-      addTask: async (title, lane, repeat, tags = [], energy = 'medium') => {
+      addTask: async ({ title, lane, repeat, repeatDayOfWeek, repeatDayOfMonth, tags = [], energy = 'medium' }) => {
         const stamp = new Date().toISOString()
+        const schedule = normalizeRepeatSchedule(repeat, { repeatDayOfWeek, repeatDayOfMonth }, stamp)
         const task: Task = {
           id: createId(),
           title,
           status: 'active',
           lane,
           repeat,
+          ...schedule,
           tags,
           energy,
           createdAt: stamp,
@@ -164,16 +175,23 @@ export const useAppStore = create<AppState>()(
 
         const doneUpdate = { status: 'done' as const, completedAt: stamp, updatedAt: stamp }
         await db.tasks.update(taskId, doneUpdate)
-        let doneTasks = tasks.map((t) => t.id === taskId ? { ...t, ...doneUpdate } : t)
+        const doneTasks = tasks.map((t) => t.id === taskId ? { ...t, ...doneUpdate } : t)
 
         let repeatedTasks: Task[] = []
         if (task.repeat !== 'none') {
+          const schedule = normalizeRepeatSchedule(
+            task.repeat,
+            { repeatDayOfWeek: task.repeatDayOfWeek, repeatDayOfMonth: task.repeatDayOfMonth },
+            stamp,
+          )
           const repeatedTask: Task = {
             id: createId(),
             title: task.title,
             status: 'active',
-            lane: 'next',
+            lane: task.lane,
             repeat: task.repeat,
+            ...schedule,
+            nextVisibleOn: computeNextVisibleOn({ repeat: task.repeat, ...schedule }, stamp),
             tags: task.tags,
             energy: task.energy,
             createdAt: stamp,
@@ -205,10 +223,10 @@ export const useAppStore = create<AppState>()(
 
       reopen: async (taskId) => {
         const stamp = new Date().toISOString()
-        await db.tasks.update(taskId, { status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, updatedAt: stamp })
+        await db.tasks.update(taskId, { status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, nextVisibleOn: undefined, updatedAt: stamp })
         set((state) => ({
           tasks: state.tasks.map((t) =>
-            t.id === taskId ? { ...t, status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, updatedAt: stamp } : t
+            t.id === taskId ? { ...t, status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, nextVisibleOn: undefined, updatedAt: stamp } : t
           ),
         }))
       },
@@ -243,10 +261,10 @@ export const useAppStore = create<AppState>()(
 
       restore: async (taskId) => {
         const stamp = new Date().toISOString()
-        await db.tasks.update(taskId, { status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, updatedAt: stamp })
+        await db.tasks.update(taskId, { status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, nextVisibleOn: undefined, updatedAt: stamp })
         set((state) => ({
           tasks: state.tasks.map((t) =>
-            t.id === taskId ? { ...t, status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, updatedAt: stamp } : t
+            t.id === taskId ? { ...t, status: 'active', lane: 'today', completedAt: undefined, trashedAt: undefined, nextVisibleOn: undefined, updatedAt: stamp } : t
           ),
         }))
       },
