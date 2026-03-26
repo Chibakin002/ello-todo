@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAppStore } from '../store'
-import { ordinal, weekdayOptions } from '../tasks'
+import { formatDayLabel, ordinal, weekdayOptions } from '../tasks'
 import type { TaskLane, RepeatRule, TaskEnergy } from '../types'
 
 export function TaskForm() {
@@ -11,6 +11,7 @@ export function TaskForm() {
   const [repeat, setRepeat] = useState<RepeatRule>('none')
   const [repeatDayOfWeek, setRepeatDayOfWeek] = useState(() => new Date().getDay())
   const [repeatDayOfMonth, setRepeatDayOfMonth] = useState(() => new Date().getDate())
+  const [showOnDate, setShowOnDate] = useState('')
   const [energy, setEnergy] = useState<TaskEnergy>('medium')
   const [tagsInput, setTagsInput] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -32,6 +33,7 @@ export function TaskForm() {
       repeat,
       repeatDayOfWeek: repeat === 'weekly' ? repeatDayOfWeek : undefined,
       repeatDayOfMonth: repeat === 'monthly' ? repeatDayOfMonth : undefined,
+      showOnDate: showOnDate || undefined,
       tags,
       energy,
     })
@@ -39,6 +41,7 @@ export function TaskForm() {
     setTitle('')
     setTagsInput('')
     setRepeat('none')
+    setShowOnDate('')
     const resetDate = new Date()
     setRepeatDayOfWeek(resetDate.getDay())
     setRepeatDayOfMonth(resetDate.getDate())
@@ -80,6 +83,13 @@ export function TaskForm() {
           <option value="weekly">Weekly</option>
           <option value="monthly">Monthly</option>
         </select>
+
+        <input
+          type="date"
+          value={showOnDate}
+          onChange={(e) => setShowOnDate(e.target.value)}
+          aria-label="Show on date"
+        />
         
         <input 
           className="tags-input"
@@ -118,6 +128,12 @@ export function TaskForm() {
             When you complete it, it disappears and comes back on its next scheduled date.
           </p>
         </div>
+      )}
+
+      {showOnDate && (
+        <p className="repeat-hint">
+          Scheduled for {formatDayLabel(showOnDate)}. It will appear on that date.
+        </p>
       )}
       
       {error && <p className="error-text">{error}</p>}

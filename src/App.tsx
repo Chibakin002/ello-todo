@@ -10,6 +10,7 @@ import { TrashPanel } from './components/TrashPanel'
 import { DailyCheckIn } from './components/DailyCheckIn'
 import { NowCard } from './components/NowCard'
 import { getVisibleTasks } from './tasks'
+import { useTodayKey } from './useTodayKey'
 
 function App() {
   const loadFromDb = useAppStore((s) => s.loadFromDb)
@@ -17,8 +18,8 @@ function App() {
   const clearUndo = useAppStore((s) => s.clearUndo)
   const undo = useAppStore((s) => s.undo)
   const tasks = useAppStore(s => s.tasks)
-
   const [loading, setLoading] = useState(true)
+  const todayKey = useTodayKey()
 
   useEffect(() => {
     loadFromDb().then(() => setLoading(false))
@@ -39,8 +40,9 @@ function App() {
 
   if (loading) return <div className="app-shell" style={{ padding: '2rem' }}>Loading Database...</div>
 
-  const visibleTasks = getVisibleTasks(tasks)
+  const visibleTasks = getVisibleTasks(tasks, todayKey)
   const todayCount = visibleTasks.filter(t => t.lane === 'today').length
+  const scheduledCount = tasks.filter((task) => task.status === 'active' && task.nextVisibleOn && task.nextVisibleOn > todayKey).length
   
   return (
     <div className="app-shell">
@@ -51,6 +53,7 @@ function App() {
         </div>
         <div className="stats">
           <article><span>Today</span><strong>{todayCount}</strong></article>
+          <article><span>Scheduled</span><strong>{scheduledCount}</strong></article>
         </div>
       </header>
 

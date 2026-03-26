@@ -14,6 +14,7 @@ import { TaskLaneColumn } from './TaskLane'
 import { TaskItem } from './TaskItem'
 import { useAppStore } from '../store'
 import { getVisibleTasks } from '../tasks'
+import { useTodayKey } from '../useTodayKey'
 import type { TaskLane } from '../types'
 
 export function Board() {
@@ -21,13 +22,14 @@ export function Board() {
   const moveLane = useAppStore(s => s.moveLane)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const todayKey = useTodayKey()
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const active = getVisibleTasks(tasks)
+  const active = getVisibleTasks(tasks, todayKey)
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
   
   const todayTasks = active.filter(t => t.lane === 'today')

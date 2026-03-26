@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../store'
-import { getRepeatLabel } from '../tasks'
+import { getRepeatLabel, getVisibilityLabel } from '../tasks'
 import type { Task, TaskLane } from '../types'
 
 function cycleLane(lane: TaskLane): TaskLane {
@@ -37,6 +37,7 @@ export function TaskItem({ task, selected, onSelect }: Props) {
   const runningHere = activeTimer?.taskId === task.id
   const disableFocus = Boolean(activeTimer && !runningHere)
   const repeatLabel = getRepeatLabel(task)
+  const visibilityLabel = getVisibilityLabel(task)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -70,6 +71,7 @@ export function TaskItem({ task, selected, onSelect }: Props) {
         </div>
         <div className="task-meta">
           {repeatLabel && <small>{repeatLabel}</small>}
+          {visibilityLabel && <small>{visibilityLabel}</small>}
           <small>Updated {formatDate(task.updatedAt)}</small>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import type { RepeatRule, Task } from './types'
 
 export const weekdayOptions = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+const DAY_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 function dayKey(value: string | number | Date): string {
   const date = new Date(value)
@@ -91,12 +92,25 @@ export function computeNextVisibleOn(
   return undefined
 }
 
+export function normalizeNextVisibleOn(
+  nextVisibleOn?: string,
+  referenceValue: string | number | Date = Date.now(),
+): string | undefined {
+  if (!nextVisibleOn || !DAY_KEY_PATTERN.test(nextVisibleOn)) return undefined
+  const referenceDay = dayKey(referenceValue)
+  return nextVisibleOn > referenceDay ? nextVisibleOn : undefined
+}
+
 export function isTaskVisible(task: Task, todayKey: string = dayKey(Date.now())): boolean {
   return task.status === 'active' && (!task.nextVisibleOn || task.nextVisibleOn <= todayKey)
 }
 
 export function getVisibleTasks(tasks: Task[], todayKey: string = dayKey(Date.now())): Task[] {
   return tasks.filter((task) => isTaskVisible(task, todayKey))
+}
+
+export function formatDayLabel(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(`${value}T12:00:00`))
 }
 
 export function getRepeatLabel(task: Pick<Task, 'repeat' | 'repeatDayOfWeek' | 'repeatDayOfMonth' | 'createdAt'>): string | null {
@@ -108,4 +122,8 @@ export function getRepeatLabel(task: Pick<Task, 'repeat' | 'repeatDayOfWeek' | '
   }
   const fallbackDay = task.createdAt ? new Date(task.createdAt).getDate() : 1
   return `Monthly on the ${ordinal(task.repeatDayOfMonth ?? fallbackDay)}`
+}
+
+export function getVisibilityLabel(task: Pick<Task, 'nextVisibleOn'>): string | null {
+  return task.nextVisibleOn ? `Starts ${formatDayLabel(task.nextVisibleOn)}` : null
 }

@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from 'react'
-import { useAppStore, dayKey } from '../store'
+import { useMemo, useState } from 'react'
+import { useAppStore } from '../store'
 import { getRepeatLabel, getVisibleTasks } from '../tasks'
+import { useTodayKey } from '../useTodayKey'
 
 const laneRank = { today: 0, next: 1, later: 2 }
 
@@ -11,9 +12,9 @@ export function DailyCheckIn() {
   const skipPlan = useAppStore((s) => s.skipPlan)
   
   const [manualPlan, setManualPlan] = useState<{ dayKey: string; ids: string[] } | null>(null)
-  const [todayKey, setTodayKey] = useState(() => dayKey(Date.now()))
+  const todayKey = useTodayKey()
 
-  const active = useMemo(() => getVisibleTasks(tasks), [tasks])
+  const active = useMemo(() => getVisibleTasks(tasks, todayKey), [tasks, todayKey])
   const needsCheck = active.length > 0 && lastDailyCheckKey !== todayKey
 
   const plannerCandidates = useMemo(() => {
@@ -35,11 +36,6 @@ export function DailyCheckIn() {
     }
     return defaultPlanIds
   }, [candidateIds, defaultPlanIds, manualPlan, needsCheck, todayKey])
-
-  useEffect(() => {
-    const id = setInterval(() => setTodayKey(dayKey(Date.now())), 60_000)
-    return () => clearInterval(id)
-  }, [])
 
   if (!needsCheck) return null
 

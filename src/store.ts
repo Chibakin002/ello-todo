@@ -4,7 +4,7 @@ import { db } from './db'
 import { playBeep, playSuccess, playBuzzer, stopBuzzer } from './audio'
 import confetti from 'canvas-confetti'
 import type { Task, FocusSession, ActiveTimer, Settings, TaskLane, RepeatRule, SessionMode, TaskEnergy } from './types'
-import { computeNextVisibleOn, normalizeRepeatSchedule } from './tasks'
+import { computeNextVisibleOn, normalizeNextVisibleOn, normalizeRepeatSchedule } from './tasks'
 
 const DAY_MS = 86_400_000
 const UNDO_MS = 10_000
@@ -67,6 +67,7 @@ interface AppState {
     repeat: RepeatRule
     repeatDayOfWeek?: number
     repeatDayOfMonth?: number
+    showOnDate?: string
     tags?: string[]
     energy?: TaskEnergy
   }) => Promise<void>
@@ -115,7 +116,7 @@ export const useAppStore = create<AppState>()(
         set({ tasks, sessions })
       },
 
-      addTask: async ({ title, lane, repeat, repeatDayOfWeek, repeatDayOfMonth, tags = [], energy = 'medium' }) => {
+      addTask: async ({ title, lane, repeat, repeatDayOfWeek, repeatDayOfMonth, showOnDate, tags = [], energy = 'medium' }) => {
         const stamp = new Date().toISOString()
         const schedule = normalizeRepeatSchedule(repeat, { repeatDayOfWeek, repeatDayOfMonth }, stamp)
         const task: Task = {
@@ -125,6 +126,7 @@ export const useAppStore = create<AppState>()(
           lane,
           repeat,
           ...schedule,
+          nextVisibleOn: normalizeNextVisibleOn(showOnDate, stamp),
           tags,
           energy,
           createdAt: stamp,
